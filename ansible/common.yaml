@@ -1,0 +1,31 @@
+- name: Adding host's into playbook
+  hosts: localhost
+  become: yes
+
+  tasks:
+    - name: Add host as build
+      add_host:
+        hostname: "{{ (lookup('file', '../address.json') | from_json).get('build_ip') }}"
+        groups: build
+    - name: Add host as deploy
+      add_host:
+        hostname: "{{ (lookup('file', '../address.json') | from_json).get('deploy_ip') }}"
+        groups: deploy
+
+- name: Provisioning docker and python to all hosts
+  hosts: all
+  become: yes
+
+  tasks:
+    - name: Ensure python is present
+      apt:
+        update_cache: yes
+        name:
+          - python-docker
+          - python
+          - python-pip
+        state: latest
+    - name: Ensure docker.io is present
+      apt:
+        name: docker.io
+        state: latest
