@@ -1,0 +1,40 @@
+- name: Adding host into playbook
+  hosts: localhost
+  become: yes
+
+  tasks:
+    - name: Add host as build
+      add_host:
+        hostname: "{{ (lookup('file', '../address.json') | from_json).get('build_ip') }}"
+        groups: build
+
+- name: Provisioning server's build
+  hosts: build
+  become: yes
+
+  tasks:
+    - name: Clone simple-springboot-project from github
+      git:
+        repo: https://github.com/AlexanderKazakov1/simple-springboot-project.git
+        dest: /home/user/app
+
+    - name: Build simple-springboot-project
+      docker_image:
+        name: simple-springboot-project-image
+        tag: 0.0.1
+        build:
+          path: /home/user/app
+          dockerfile: Dockerfile
+        source: build
+
+    - name: Log into DockerHub
+      docker_login:
+        username: "{{ lookup('ini', 'username type=properties file=./docker.properties') }}"
+        password: "{{ lookup('ini', 'password type=properties file=./docker.properties') }}"
+
+    - name: Tag simple-springboot-project and push to docker hub
+      docker_image:
+        name: simple-springboot-project-image:0.0.1
+        repository: "{{ lookup('ini', 'username type=properties file=./docker.properties') }}/simple-springboot-project-image:0.0.1"
+        push: true
+        source: local
